@@ -24,30 +24,45 @@
 
 from __future__ import print_function
 import pixy
-from ctypes import *
+# from ctypes import *
 from pixy import *
-from time import sleep
+from time import sleep, localtime
 import RPi.GPIO as GPIO
-
-STEPPER_PINS = []
+import asyncio
 
 
 class motor:
     '''motor object to describe setup and functions'''
     # static class vars
     directions = {'cw': 1, 'ccw': 0}
+    step_delay = .1  # delay between steps
 
     # default constructor
-    def __init__(self, step_pin=None):
-        self.step_pin = 0
+    def __init__(self, step_pin=40, dir_pin=5):
+        self.step_pin = step_pin
+        self.dir_pin = dir_pin
         self.steps = 0
-        # GPIO.
+        GPIO.setup(self.step_pin, GPIO.OUT)
+        GPIO.setup(self.dir_pin, GPIO.OUT)
 
-    def rotate(self, choice):
+    # TODO: map steps to degrees of rotation
+    # BUG: GPIO.output needs to support multiple axis and subsequently multiple IO in different directions
+    # NOTE: GPIO.output([list of pins], [list of state]) works to turn on multiple ports with different states
+    def rotate(self, steps, choice):
+        print(localtime())
         if choice in self.directions:
-            GPIO.output(self.step_pin, self.directions[choice])
+            GPIO.output(self.dir_pin, self.directions[choice])
+            while steps > 0:
+                print(steps)
+                GPIO.output([self.dir_pin, self.step_pin], [True, False])
+                sleep(self.step_delay)
+                GPIO.output([self.dir_pin, self.step_pin], [False, True])
+                sleep(self.step_delay)
+                steps -= 1
+
         else:
             raise Exception('invalid direction input')
+        print(localtime())
 
 
 def gpio_init():
@@ -57,9 +72,7 @@ def gpio_init():
     GPIO.setwarnings(False)  # remove annoying debugger issues
 
     # TODO: populate this list with the pin configuration
-    for pin in STEPPER_PINS:
-        GPIO.setChannel()
-        STEPPER_PINS = []  # list to hold dedicated stepper pins
+    stepper_pins = []  # list to hold dedicated stepper pins
 
 
 def init_modules():
@@ -74,9 +87,10 @@ def init_modules():
 
     # init stepper motors
     a = motor()
-    b = motor(1)
-
+    a.rotate(50, 'cw')
+    a.rotate(100, 'ccw')
     # init variables
+    print("async done")
 
 
 def main(args):
