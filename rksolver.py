@@ -29,6 +29,8 @@ from pixy import *
 from time import sleep
 import RPi.GPIO as GPIO
 
+STEPPER_PINS = []
+
 
 class motor:
     '''motor object to describe setup and functions'''
@@ -39,6 +41,7 @@ class motor:
     def __init__(self, step_pin=None):
         self.step_pin = 0
         self.steps = 0
+        # GPIO.
 
     def rotate(self, choice):
         if choice in self.directions:
@@ -54,7 +57,9 @@ def gpio_init():
     GPIO.setwarnings(False)  # remove annoying debugger issues
 
     # TODO: populate this list with the pin configuration
-    stepper_pins = []  # list to hold dedicated stepper pins
+    for pin in STEPPER_PINS:
+        GPIO.setChannel()
+        STEPPER_PINS = []  # list to hold dedicated stepper pins
 
 
 def init_modules():
