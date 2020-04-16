@@ -30,24 +30,26 @@ from time import sleep, localtime
 import RPi.GPIO as GPIO
 import asyncio
 
-RKS_NOTATION = {'F': 0,
-                'R': 0,
-                'U': 0,
-                'L': 0,
-                'B': 0,
-                'D': 0,
-                'F\'': 0,
-                'R\'': 0,
-                'U\'': 0,
-                'L\'': 0,
-                'B\'': 0,
-                'D\'': 0,
-                'F2': 0,
-                'R2': 0,
-                'U2': 0,
-                'L2': 0,
-                'B2': 0,
-                'D2': 0
+# rotations per instruction
+""" ' indicates prime which is ccw as per std cube notation """
+RKS_NOTATION = {'F': 90,
+                'R': 90,
+                'U': 90,
+                'L': 90,
+                'B': 90,
+                'D': 90,
+                'F\'': -90,
+                'R\'': -90,
+                'U\'': -90,
+                'L\'': -90,
+                'B\'': -90,
+                'D\'': -90,
+                'F2': 180,
+                'R2': 180,
+                'U2': 180,
+                'L2': 180,
+                'B2': 180,
+                'D2': 180
                 }
 
 
