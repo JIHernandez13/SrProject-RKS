@@ -32,25 +32,41 @@ import asyncio
 
 # rotations per instruction
 """ ' indicates prime which is ccw as per std cube notation """
-RKS_NOTATION = {'F': 90,
-                'R': 90,
-                'U': 90,
-                'L': 90,
-                'B': 90,
-                'D': 90,
-                'F\'': -90,
-                'R\'': -90,
-                'U\'': -90,
-                'L\'': -90,
-                'B\'': -90,
-                'D\'': -90,
-                'F2': 180,
-                'R2': 180,
-                'U2': 180,
-                'L2': 180,
-                'B2': 180,
-                'D2': 180
+RKS_NOTATION = {"F": 90,
+                "R": 90,
+                "U": 90,
+                "L": 90,
+                "B": 90,
+                "D": 90,
+                "F'": -90,
+                "R'": -90,
+                "U'": -90,
+                "L'": -90,
+                "B'": -90,
+                "D'": -90,
+                "F2": 180,
+                "R2": 180,
+                "U2": 180,
+                "L2": 180,
+                "B2": 180,
+                "D2": 180
                 }
+
+# temp hardcoded frame locations. Should be fairly consistent once camera is mounted.
+# TODO: update these numbers with the camera mounted
+FRAME_LOCATIONS = [[0, 0],
+                   [0, 1],
+                   [0, 2],
+                   [1, 0],
+                   [1, 1],
+                   [1, 2],
+                   [2, 0],
+                   [2, 1],
+                   [2, 2]]
+
+# TODO: populate these with actual pin config
+DIR_PINS = []
+STEP_PINS = []
 
 
 def gpio_init():
@@ -75,8 +91,8 @@ class motor:
         GPIO.setup(self.dir_pin, GPIO.OUT)
 
     # TODO: map steps to degrees of rotation
-    # BUG: GPIO.output needs to support multiple axis and subsequently multiple IO in different directions
-    # NOTE: GPIO.output([list of pins], [list of state]) works to turn on multiple ports with different states
+    # NOTE: GPIO.output([list of pins], [list of state]) works to turn on
+    # multiple ports with different states
     def rotate(self, steps=10, choice='cw'):
         ''' steps is number of times the motor toggles the step pin
             choices are 'cw' or 'ccw' as string
@@ -94,13 +110,24 @@ class motor:
             sleep(self.step_delay)
             steps -= 1
 
+# TODO: create outline structure of rks module
+# what should be in the module
+# what functions the module should have
+# getters and setters for private vars
+class rks(motor):
+    def __init__(self, **kwargs):
+        self.m_front = kwargs['front']
+        self.m_back = kwargs['back']
+        self.m_left = kwargs['left']
+        self.m_right = kwargs['right']
+        self.m_xAxis = kwargs['xAxis']
+        self.m_yAxis = kwargs['yAxis']
 
-class axis(motor):
-    ''' 2 motor per axis '''
-
-    def __init__(self, motor_a=None, motor_b=None):
-        self.MotorA = motor_a
-        self.MotorB = motor_b
+    # TODO: create rotations for each item in the list returned from
+    def RKS_Rotation(self, solution):
+        for value in solution:
+            pass
+        pass
 
     def move_axis(self, open_close=None):
         if open_close == 'in':
@@ -114,9 +141,7 @@ class axis(motor):
                 "innappropriate value\n in or out needs to be specified")
 
 
-def init_modules():
-    '''Initialize all variables and classes involved'''
-
+def main():
     # init pixy
     pixy.init()
     pixy.set_lamp(False, False)  # upper lamp off, lower lamp on
@@ -124,24 +149,39 @@ def init_modules():
     # init GPIO
     gpio_init()
 
-    # init variables
-
-
-def main(args):
-    init_modules()
-
     # init stepper motors
-    m_front = motor()
-    m_back = motor()
-    m_left = motor()
-    m_right = motor()
-    m_xAxis = motor()
-    m_yAxis = motor()
+    motors = {'front': motor(STEP_PINS[0], DIR_PINS[0]),
+              'back': motor(STEP_PINS[1], DIR_PINS[1]),
+              'left': motor(STEP_PINS[2], DIR_PINS[2]),
+              'right': motor(STEP_PINS[3], DIR_PINS[3]),
+              'xAxis': motor(STEP_PINS[4], DIR_PINS[4]),
+              'yAxis': motor(STEP_PINS[5], DIR_PINS[5])}
 
-    while 1:
-        sleep(.1)
+    # init rks module
+    rks(**motors)
+    """ Grab RGB from video """
+    get_rgb()
+    """ Subroutine for grabbing each side """
+    sleep(5)
+
+
+def get_rgb():
+    cube_state = []
+
+    for i in range(6):
+        for x, y in FRAME_LOCATIONS:
+            cube_state.append([pixy.video_get_RGB(x, y), x, y])
+
+    for val in cube_state:
+        print(val)
+
+
+# TODO: write wrapper function to map rotations to rks notation.
+"""     while 1:
+        # TODO: implement state machine
+        sleep(.1) """
 
 
 if __name__ == '__main__':
     import sys
-    sys.exit((main(sys.argv)))
+    sys.exit((main()))
