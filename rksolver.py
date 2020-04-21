@@ -31,7 +31,7 @@ import RPi.GPIO as GPIO
 import asyncio
 
 # rotations per instruction
-""" ' indicates prime which is ccw as per std cube notation """
+""" indicates prime which is ccw as per std cube notation """
 RKS_NOTATION = {"F": 90,
                 "R": 90,
                 "U": 90,
@@ -77,10 +77,11 @@ def gpio_init():
 
 
 class motor:
-    '''motor object to describe setup and functions'''
+    """ NEMA17 motor object to describe setup and functions """
     # static class vars
     directions = {'cw': 1, 'ccw': 0}
     step_delay = .1  # delay between steps
+    steps_per_revolution = 200  # degrees per step 1.8 deg
 
     # default constructor
     def __init__(self, step_pin=40, dir_pin=5):
@@ -114,6 +115,8 @@ class motor:
 # what should be in the module
 # what functions the module should have
 # getters and setters for private vars
+
+
 class rks(motor):
     def __init__(self, **kwargs):
         self.m_front = kwargs['front']
@@ -166,6 +169,7 @@ def main():
 
 
 def get_rgb():
+    """ Grabs 1 side of cube. Returns a list with RGB val in each position """
     cube_state = []
 
     for i in range(6):
@@ -174,6 +178,7 @@ def get_rgb():
 
     for val in cube_state:
         print(val)
+    return cube_state
 
 
 # TODO: write wrapper function to map rotations to rks notation.
