@@ -30,27 +30,6 @@ from time import sleep, localtime
 import RPi.GPIO as GPIO
 import asyncio
 
-# rotations per instruction
-""" indicates prime which is ccw as per std cube notation """
-RKS_NOTATION = {"F": 90,
-                "R": 90,
-                "U": 90,
-                "L": 90,
-                "B": 90,
-                "D": 90,
-                "F'": -90,
-                "R'": -90,
-                "U'": -90,
-                "L'": -90,
-                "B'": -90,
-                "D'": -90,
-                "F2": 180,
-                "R2": 180,
-                "U2": 180,
-                "L2": 180,
-                "B2": 180,
-                "D2": 180
-                }
 
 # temp hardcoded frame locations. Should be fairly consistent once camera is mounted.
 # TODO: update these numbers with the camera mounted
@@ -91,17 +70,20 @@ class motor:
         GPIO.setup(self.step_pin, GPIO.OUT)
         GPIO.setup(self.dir_pin, GPIO.OUT)
 
-    # TODO: map steps to degrees of rotation
     # NOTE: GPIO.output([list of pins], [list of state]) works to turn on
     # multiple ports with different states
-    def rotate(self, steps=10, choice='cw'):
+    # TODO: refactor to take negative degrees
+    def rotate(self, degrees=90):
         ''' steps is number of times the motor toggles the step pin
             choices are 'cw' or 'ccw' as string
         '''
-        if choice in self.directions:
-            GPIO.output(self.dir_pin, self.directions[choice])
-        else:
-            raise Exception('invalid direction input')
+        steps = degrees/200
+        assert choice in self.directions
+
+        if degrees > 0:
+            GPIO.output(self.dir_pin, self.directions['cw'])
+        elif degrees < 0:
+            GPIO.output(self.dir_pin, self.directions['ccw'])
 
         # routine to toggle step pin
         while steps > 0:
@@ -118,6 +100,10 @@ class motor:
 
 
 class rks(motor):
+    """ Rubik's cube solver object
+    Local vars: 6 motor objects
+     """
+
     def __init__(self, **kwargs):
         self.m_front = kwargs['front']
         self.m_back = kwargs['back']
@@ -125,12 +111,74 @@ class rks(motor):
         self.m_right = kwargs['right']
         self.m_xAxis = kwargs['xAxis']
         self.m_yAxis = kwargs['yAxis']
+        # rotations per instruction
+        """ indicates prime which is ccw as per std cube notation """
+        RKS_NOTATION = {"F": [self.m_front, 90],
+                        "R": [self.m_right, 90],
+                        "U": ["up", 90],
+                        "L": [self.m_left, 90],
+                        "B": [self.m_back, 90],
+                        "D": ["down", 90],
+                        "F'": [self.m_front, -90],
+                        "R'": [self.m_right, -90],
+                        "U'": ["up", -90],
+                        "L'": [self.m_left, -90],
+                        "B'": [self.m_back, -90],
+                        "D'": ["down", -90],
+                        "F2": [self.m_front, 180],
+                        "R2": [self.m_right, 180],
+                        "U2": ["up", 180],
+                        "L2": [self.m_left, 180],
+                        "B2": [self.m_back, 180],
+                        "D2": ["down", 180]}
 
     # TODO: create rotations for each item in the list returned from
+    # TODO: create solution for up and down row rotations
     def RKS_Rotation(self, solution):
-        for value in solution:
-            pass
-        pass
+        """ takes in list of rotations required to solve the cube """
+        for rotation in solution:
+            motor, degrees = RKS_NOTATION[rotation]  # unpack solution
+            if motor is not "up" or "down":
+                motor.rotate(degrees)
+            elif motor is "up":
+                # open up side motors to flip cube
+                self.m_xAxis.rotate(45)
+                sleep(0.1)
+
+                # flip cube
+                # TODO: make these tasks concurrent
+                self.m_left.rotate(-90)
+                self.m_right.rotate(90)
+
+                # make the rotation
+                self.m_front.rotate(degrees)
+
+                # put cube back in proper orientation
+                self.m_left.rotate(90)
+                self.m_right.rotate(-90)
+
+                # close side motors
+                self.m_xAxis.rotate(-45)
+
+            elif motor is "down":
+                # open up side motors to flip cube
+                self.m_yAxis.rotate(45)
+                sleep(0.1)
+
+                # flip cube
+                # TODO: make these tasks concurrent
+                self.m_front.rotate(-90)
+                self.m_back.rotate(90)
+
+                # make the rotation
+                self.m_right.rotate(degrees)
+
+                # put cube back in proper orientation
+                self.m_front.rotate(90)
+                self.m_back.rotate(-90)
+
+                # close side motors
+                self.m_yAxis.rotate(-45)
 
     def move_axis(self, open_close=None):
         if open_close == 'in':
@@ -174,7 +222,7 @@ def get_rgb():
 
     for i in range(6):
         for x, y in FRAME_LOCATIONS:
-            cube_state.append([pixy.video_get_RGB(x, y), x, y])
+            cube_state.append([pixy.video_get_RGB(x, y)])
 
     for val in cube_state:
         print(val)
