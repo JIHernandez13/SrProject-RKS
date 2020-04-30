@@ -44,8 +44,8 @@ FRAME_LOCATIONS = [[0, 0],
                    [2, 2]]
 
 # TODO: populate these with actual pin config
-DIR_PINS = []
-STEP_PINS = []
+DIR_PINS = [11, 15, 21, 16, 31, 35]
+STEP_PINS = [13, 19, 23, 18, 33, 37]
 
 
 def gpio_init():
@@ -59,7 +59,7 @@ class motor:
     """ NEMA17 motor object to describe setup and functions """
     # static class vars
     directions = {'cw': 1, 'ccw': 0}
-    step_delay = .1  # delay between steps
+    step_delay = .001  # delay between steps
     steps_per_revolution = 200  # degrees per step 1.8 deg
 
     # default constructor
@@ -77,8 +77,8 @@ class motor:
         ''' steps is number of times the motor toggles the step pin
             choices are 'cw' or 'ccw' as string
         '''
-        steps = degrees/200
-        assert choice in self.directions
+        steps = int((degrees*self.steps_per_revolution)/360)
+        steps = abs(steps)
 
         if degrees > 0:
             GPIO.output(self.dir_pin, self.directions['cw'])
@@ -193,10 +193,14 @@ class rks(motor):
 
 
 def main():
-    # init pixy
-    pixy.init()
-    pixy.set_lamp(False, False)  # upper lamp off, lower lamp on
-
+#     try:
+#         # init pixy
+#         pixy.init()
+#         pixy.set_lamp(False, False)  # upper lamp off, lower lamp on
+#     except Exception as error:
+#         print(f"{error}\npixy not connected")
+#         pass
+    
     # init GPIO
     gpio_init()
 
@@ -207,7 +211,22 @@ def main():
               'right': motor(STEP_PINS[3], DIR_PINS[3]),
               'xAxis': motor(STEP_PINS[4], DIR_PINS[4]),
               'yAxis': motor(STEP_PINS[5], DIR_PINS[5])}
-
+    d1 = motor(13, 11)
+    d2 = motor(19,15)
+    d3 = motor(23, 21)
+    d4 = motor(29, 31)
+    while 1:
+        d1.rotate(-360)
+        sleep(1)
+        d2.rotate(-360)
+        sleep(1)
+        d3.rotate(-360)
+        sleep(1)
+        d4.rotate(-360)
+        sleep(1)
+        
+        
+                    
     # init rks module
     rks(**motors)
     """ Grab RGB from video """
