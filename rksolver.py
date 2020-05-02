@@ -28,7 +28,7 @@ import pixy
 from pixy import *
 from time import sleep, localtime
 import RPi.GPIO as GPIO
-
+import threading
 
 # temp hardcoded frame locations. Should be fairly consistent once camera is mounted.
 # TODO: update these numbers with the camera mounted
@@ -139,6 +139,7 @@ class rks(motor):
 
     # TODO: create rotations for each item in the list returned from
     # TODO: create solution for up and down row rotations
+    # TODO: Create wrapper function for concurrent motor driving
     def RKS_Rotation(self, solution):
         """ takes in list of rotations required to solve the cube """
         for rotation in solution:
@@ -147,43 +148,92 @@ class rks(motor):
                 motor.rotate(degrees)
             elif motor is "up":
                 # open up side motors to flip cube
-                self.m_xAxis.rotate(45)
+                self.move_axis('x', 'open')
                 sleep(0.1)
 
                 # flip cube
-                # TODO: make these tasks concurrent
-                self.m_left.rotate(-90)
-                self.m_right.rotate(90)
+                # Threading first command will pass onto second intruction and
+                # make these 2 lines more or less concurrent
+                jobs = []
+                t1 = threading.Thread(self.m_left.rotate(90))
+                t2 = threading.Thread(self.m_right.rotate(-90))
+                jobs.append(t1)
+                jobs.append(t2)
+
+                # flip cube
+                # start turns concurrently
+                for j in jobs:
+                    j.start()
+
+                # make sure tasks finishes
+                for j in jobs:
+                    j.join()
+
+                sleep(.5)
 
                 # make the rotation
                 self.m_front.rotate(degrees)
 
                 # put cube back in proper orientation
-                self.m_left.rotate(90)
-                self.m_right.rotate(-90)
+                jobs = []
+                t1 = threading.Thread(self.m_left.rotate(-90))
+                t2 = threading.Thread(self.m_right.rotate(90))
+                jobs.append(t1)
+                jobs.append(t2)
+
+                # flip cube
+                # start turns concurrently
+                for j in jobs:
+                    j.start()
+
+                # make sure tasks finishes
+                for j in jobs:
+                    j.join()
 
                 # close side motors
-                self.m_xAxis.rotate(-45)
+                self.move_axis('x', 'close')
 
             elif motor is "down":
                 # open up side motors to flip cube
-                self.m_yAxis.rotate(45)
+                self.move_axis('y', 'open')
+
                 sleep(0.1)
 
+                jobs = []
+                t1 = threading.Thread(self.m_left.rotate(-90))
+                t2 = threading.Thread(self.m_right.rotate(90))
+                jobs.append(t1)
+                jobs.append(t2)
+
                 # flip cube
-                # TODO: make these tasks concurrent
-                self.m_front.rotate(-90)
-                self.m_back.rotate(90)
+                # start turns concurrently
+                for j in jobs:
+                    j.start()
+
+                # make sure tasks finishes
+                for j in jobs:
+                    j.join()
 
                 # make the rotation
                 self.m_right.rotate(degrees)
 
-                # put cube back in proper orientation
-                self.m_front.rotate(90)
-                self.m_back.rotate(-90)
+                jobs = []
+                t1 = threading.Thread(self.m_left.rotate(90))
+                t2 = threading.Thread(self.m_right.rotate(-90))
+                jobs.append(t1)
+                jobs.append(t2)
+
+                # flip cube
+                # start turns concurrently
+                for j in jobs:
+                    j.start()
+
+                # make sure tasks finishes
+                for j in jobs:
+                    j.join()
 
                 # close side motors
-                self.m_yAxis.rotate(-45)
+                self.move_axis('y', 'close')
 
     def move_axis(self, axis=None, direction=None):
         """ moves axis in or out\n
@@ -191,11 +241,18 @@ class rks(motor):
         @param2: open or close axis"""
         assert (direction == 'open' or direction == 'close')
         assert (axis == 'x' or axis == 'y')
-        if direction == 'open':
-            self.m_xAxis.rotate()
-        elif direction == 'close':
-            self.MotorA.rotate()
-            self.MotorB.rotate()
+
+        if axis == 'x':
+            if direction == 'open':
+                self.m_xAxis.rotate(45)
+            elif direction == 'close':
+                self.m_xAxis.rotate(-45)
+
+        elif axis == 'y':
+            if direction == 'open':
+                self.m_yAxis.rotate(45)
+            elif direction == 'close':
+                self.m_yAxis.rotate(-45)
         else:
             raise ValueError("innappropriate value")
 
