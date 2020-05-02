@@ -66,13 +66,12 @@ class motor:
     def __init__(self, step_pin=40, dir_pin=5):
         self.step_pin = step_pin
         self.dir_pin = dir_pin
-        self.steps = 0
+        self.position_degrees = 0  # degrees
         GPIO.setup(self.step_pin, GPIO.OUT)
         GPIO.setup(self.dir_pin, GPIO.OUT)
 
     # NOTE: GPIO.output([list of pins], [list of state]) works to turn on
     # multiple ports with different states
-    # TODO: refactor to take negative degrees
     def rotate(self, degrees=90):
         ''' steps is number of times the motor toggles the step pin
             choices are 'cw' or 'ccw' as string
@@ -92,6 +91,7 @@ class motor:
             GPIO.output(self.step_pin, False)
             sleep(self.step_delay)
             steps -= 1
+            self.position_degrees += 1.8
 
 # TODO: create outline structure of rks module
 # what should be in the module
@@ -192,15 +192,46 @@ class rks(motor):
                 "innappropriate value\n in or out needs to be specified")
 
 
+def get_cube_state():
+    """ Grabs 1 side of cube. Returns a list with RGB val in each position """
+    cube_state = []
+    tolerance = [10,10,10]
+
+    for i in range(6):
+        for x, y in FRAME_LOCATIONS:
+            cube_state.append([pixy.video_get_RGB(x, y)])
+        # TODO: rotate cube to get sides
+    return cube_state
+
+def cube_state_to_rks(cube_state):
+    return cube_state
+
+def is_solved(cube_state):
+    valid_cube = {'white': 0,  # FFFFFF
+                  'red': 0,  # FF0000
+                  'blue': 0,  # 0000FF
+                  'orange': 0,  # FFA500
+                  'green': 0,  # 008000
+                  'yellow': 0  # FFFF00
+                  }
+    for i in cube_state:
+        valid_cube[i] += 1
+
+    for i in cube_state:
+        if valid_cube[i] != 9:
+            return False
+    return True
+
+
 def main():
-#     try:
-#         # init pixy
-#         pixy.init()
-#         pixy.set_lamp(False, False)  # upper lamp off, lower lamp on
-#     except Exception as error:
-#         print(f"{error}\npixy not connected")
-#         pass
-    
+    #     try:
+    #         # init pixy
+    #         pixy.init()
+    #         pixy.set_lamp(False, False)  # upper lamp off, lower lamp on
+    #     except Exception as error:
+    #         print(f"{error}\npixy not connected")
+    #         pass
+
     # init GPIO
     gpio_init()
 
@@ -212,7 +243,7 @@ def main():
               'xAxis': motor(STEP_PINS[4], DIR_PINS[4]),
               'yAxis': motor(STEP_PINS[5], DIR_PINS[5])}
     d1 = motor(13, 11)
-    d2 = motor(19,15)
+    d2 = motor(19, 15)
     d3 = motor(23, 21)
     d4 = motor(29, 31)
     while 1:
@@ -224,28 +255,13 @@ def main():
         sleep(1)
         d4.rotate(-360)
         sleep(1)
-        
-        
-                    
+
     # init rks module
     rks(**motors)
     """ Grab RGB from video """
-    get_rgb()
+    get_cube_state()
     """ Subroutine for grabbing each side """
     sleep(5)
-
-
-def get_rgb():
-    """ Grabs 1 side of cube. Returns a list with RGB val in each position """
-    cube_state = []
-
-    for i in range(6):
-        for x, y in FRAME_LOCATIONS:
-            cube_state.append([pixy.video_get_RGB(x, y)])
-
-    for val in cube_state:
-        print(val)
-    return cube_state
 
 
 # TODO: write wrapper function to map rotations to rks notation.
