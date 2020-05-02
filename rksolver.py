@@ -28,7 +28,6 @@ import pixy
 from pixy import *
 from time import sleep, localtime
 import RPi.GPIO as GPIO
-import asyncio
 
 
 # temp hardcoded frame locations. Should be fairly consistent once camera is mounted.
@@ -103,6 +102,13 @@ class rks(motor):
     """ Rubik's cube solver object
     Local vars: 6 motor objects
      """
+    colors = {'white': (255, 255, 255),  # FFFFFF
+              'red': (255, 0, 0),  # FF0000
+              'blue': (0, 0, 255),  # 0000FF
+              'orange': (255, 165, 0),  # FFA500
+              'green': (0, 128, 0),  # 008000
+              'yellow': (255, 255, 0)  # FFFF00
+              }
 
     def __init__(self, **kwargs):
         self.m_front = kwargs['front']
@@ -111,26 +117,25 @@ class rks(motor):
         self.m_right = kwargs['right']
         self.m_xAxis = kwargs['xAxis']
         self.m_yAxis = kwargs['yAxis']
-        # rotations per instruction
-        """ indicates prime which is ccw as per std cube notation """
-        RKS_NOTATION = {"F": [self.m_front, 90],
-                        "R": [self.m_right, 90],
-                        "U": ["up", 90],
-                        "L": [self.m_left, 90],
-                        "B": [self.m_back, 90],
-                        "D": ["down", 90],
-                        "F'": [self.m_front, -90],
-                        "R'": [self.m_right, -90],
-                        "U'": ["up", -90],
-                        "L'": [self.m_left, -90],
-                        "B'": [self.m_back, -90],
-                        "D'": ["down", -90],
-                        "F2": [self.m_front, 180],
-                        "R2": [self.m_right, 180],
-                        "U2": ["up", 180],
-                        "L2": [self.m_left, 180],
-                        "B2": [self.m_back, 180],
-                        "D2": ["down", 180]}
+        #  dict to map standard rks notation to motor and routine
+        self.RKS_NOTATION = {"F": [self.m_front, 90],
+                             "R": [self.m_right, 90],
+                             "U": ["up", 90],
+                             "L": [self.m_left, 90],
+                             "B": [self.m_back, 90],
+                             "D": ["down", 90],
+                             "F'": [self.m_front, -90],
+                             "R'": [self.m_right, -90],
+                             "U'": ["up", -90],
+                             "L'": [self.m_left, -90],
+                             "B'": [self.m_back, -90],
+                             "D'": ["down", -90],
+                             "F2": [self.m_front, 180],
+                             "R2": [self.m_right, 180],
+                             "U2": ["up", 180],
+                             "L2": [self.m_left, 180],
+                             "B2": [self.m_back, 180],
+                             "D2": ["down", 180]}
 
     # TODO: create rotations for each item in the list returned from
     # TODO: create solution for up and down row rotations
@@ -180,47 +185,75 @@ class rks(motor):
                 # close side motors
                 self.m_yAxis.rotate(-45)
 
-    def move_axis(self, open_close=None):
-        if open_close == 'in':
-            self.MotorA.rotate()
-            self.MotorB.rotate()
-        elif open_close == 'out':
+    def move_axis(self, axis=None, direction=None):
+        """ moves axis in or out\n
+        @param1: axis to be moved\n
+        @param2: open or close axis"""
+        assert (direction == 'open' or direction == 'close')
+        assert (axis == 'x' or axis == 'y')
+        if direction == 'open':
+            self.m_xAxis.rotate()
+        elif direction == 'close':
             self.MotorA.rotate()
             self.MotorB.rotate()
         else:
-            raise ValueError(
-                "innappropriate value\n in or out needs to be specified")
+            raise ValueError("innappropriate value")
 
+    def get_cube_state():
+        """ Grabs 1 side of cube. Returns a list with RGB val in each position """
+        cube_state = []
+        tolerance = [10, 10, 10]
+        sides = 6
+        # need to compare color (w/ tolerances) to output of camera
 
-def get_cube_state():
-    """ Grabs 1 side of cube. Returns a list with RGB val in each position """
-    cube_state = []
-    tolerance = [10,10,10]
+        # for every side
+        for face in range(sides):
+            # for each face
+            for x, y in FRAME_LOCATIONS:
+                temp = pixy.video_get_RGB(x, y)
+                # find color within tolerance
+                for color in self.colors:
+                    # red difference
+                    r_diff = abs(self.colors[color][0] - temp[0])
+                    g_diff = abs(self.colors[color][1] - temp[1])  # green diff
+                    b_diff = abs(self.colors[color][2] - temp[2])  # blue diff
 
-    for i in range(6):
-        for x, y in FRAME_LOCATIONS:
-            cube_state.append([pixy.video_get_RGB(x, y)])
-        # TODO: rotate cube to get sides
-    return cube_state
+                    # if any of these fall out of tolerance with the given color pallete
+                    if r_diff > tolerance:
+                        break
+                    elif g_diff > tolerance:
+                        break
+                    elif b_diff > tolerance:
+                        break
+                    else:
+                        cube_state.append(color)
+                        break
 
-def cube_state_to_rks(cube_state):
-    return cube_state
+        if len(cube_state) != 54:
+            print("error finding colors")
+            print(*cube_state, sep='\n')
 
-def is_solved(cube_state):
-    valid_cube = {'white': 0,  # FFFFFF
-                  'red': 0,  # FF0000
-                  'blue': 0,  # 0000FF
-                  'orange': 0,  # FFA500
-                  'green': 0,  # 008000
-                  'yellow': 0  # FFFF00
-                  }
-    for i in cube_state:
-        valid_cube[i] += 1
+            # TODO: rotate cube to get sides
+        return cube_state
 
-    for i in cube_state:
-        if valid_cube[i] != 9:
-            return False
-    return True
+    def cube_state_to_rks(cube_state):
+        return cube_state
+
+    def is_solved(cube_state):
+        valid_cube = {'white': 0,  # FFFFFF
+                      'red': 0,  # FF0000
+                      'blue': 0,  # 0000FF
+                      'orange': 0,  # FFA500
+                      'green': 0,  # 008000
+                      'yellow': 0  # FFFF00
+                      }
+        for i in cube_state:
+            valid_cube[i] += 1
+
+        for i in cube_state:
+            if valid_cube[i] != 9:
+                return False
+        return True
 
 
 def main():
