@@ -43,8 +43,8 @@ FRAME_LOCATIONS = [[0, 0],
                    [2, 2]]
 
 # TODO: populate these with actual pin config
-DIR_PINS = [11, 15, 21, 16, 31, 35]
-STEP_PINS = [13, 19, 23, 18, 33, 37]
+DIR_PINS = [11, 15, 21, 31, 35, 39]
+STEP_PINS = [13, 19, 23, 29, 33, 37]
 
 
 def gpio_init():
@@ -140,7 +140,7 @@ class rks(motor):
     # TODO: create rotations for each item in the list returned from
     # TODO: create solution for up and down row rotations
     # TODO: Create wrapper function for concurrent motor driving
-    def RKS_Rotation(self, solution):
+    def RKS_Solve(self, solution):
         """ takes in list of rotations required to solve the cube """
         for rotation in solution:
             motor, degrees = RKS_NOTATION[rotation]  # unpack solution
@@ -235,6 +235,7 @@ class rks(motor):
                 # close side motors
                 self.move_axis('y', 'close')
 
+    @staticmethod
     def move_axis(self, axis=None, direction=None):
         """ moves axis in or out\n
         @param1: axis to be moved\n
