@@ -118,35 +118,96 @@ class rks(motor):
         self.m_xAxis = kwargs['xAxis']
         self.m_yAxis = kwargs['yAxis']
         #  dict to map standard rks notation to motor and routine
-        self.RKS_NOTATION = {"F": [self.m_front, 90],
-                             "R": [self.m_right, 90],
-                             "U": ["up", 90],
-                             "L": [self.m_left, 90],
-                             "B": [self.m_back, 90],
-                             "D": ["down", 90],
-                             "F'": [self.m_front, -90],
-                             "R'": [self.m_right, -90],
-                             "U'": ["up", -90],
-                             "L'": [self.m_left, -90],
-                             "B'": [self.m_back, -90],
-                             "D'": ["down", -90],
-                             "F2": [self.m_front, 180],
-                             "R2": [self.m_right, 180],
-                             "U2": ["up", 180],
-                             "L2": [self.m_left, 180],
-                             "B2": [self.m_back, 180],
-                             "D2": ["down", 180]}
+
+        #  TODO:Refactor to make thes map to explicit functions
+        self.RKS_NOTATION = {"F": 90,
+                             "R": 90,
+                             "U": 90,
+                             "L": 90,
+                             "B": 90,
+                             "D": 90,
+                             "F'": -90,
+                             "R'": -90,
+                             "U'": -90,
+                             "L'": -90,
+                             "B'": -90,
+                             "D'": -90,
+                             "F2": 180,
+                             "R2": 180,
+                             "U2": 180,
+                             "L2": 180,
+                             "B2": 180,
+                             "D2": 180}
+
+    def rotate_front(self, degrees):
+        pass
+
+    def rotate_right(self, degrees):
+        pass
+
+    def rotate_up(self, degrees):
+        pass
+
+    def rotate_left(self, degrees):
+        pass
+
+    def rotate_back(self, degrees):
+        pass
+
+    def rotate_down(self, degrees):
+        pass
 
     # TODO: create rotations for each item in the list returned from
     # TODO: create solution for up and down row rotations
     # TODO: Create wrapper function for concurrent motor driving
+
     def RKS_Solve(self, solution):
         """ takes in list of rotations required to solve the cube """
         for rotation in solution:
-            motor, degrees = RKS_NOTATION[rotation]  # unpack solution
-            if motor is not "up" or "down":
-                motor.rotate(degrees)
-            elif motor is "up":
+            degrees = RKS_NOTATION[rotation]  # unpack solution
+
+            if rotation is "F":
+                pass
+            elif rotation is "R":
+                pass
+            elif rotation is "U":
+                pass
+            elif rotation is "L":
+                pass
+            elif rotation is "B":
+                pass
+            elif rotation is "D":
+                pass
+
+            elif rotation is "F'":
+                pass
+            elif rotation is "R'":
+                pass
+            elif rotation is "U'":
+                pass
+            elif rotation is "L'":
+                pass
+            elif rotation is "B'":
+                pass
+            elif rotation is "D'":
+                pass
+
+            elif rotation is "F2":
+                pass
+            elif rotation is "R2":
+                pass
+            elif rotation is "U2":
+                pass
+            elif rotation is "L2":
+                pass
+            elif rotation is "B2":
+                pass
+            elif rotation is "D2":
+                pass
+
+            if rotation is not "up" or "down":
+                rotation.rotate(degrees)
+            elif rotation is "up":
                 # open up side motors to flip cube
                 self.move_axis('x', 'open')
                 sleep(0.1)
@@ -193,7 +254,7 @@ class rks(motor):
                 # close side motors
                 self.move_axis('x', 'close')
 
-            elif motor is "down":
+            elif rotation is "down":
                 # open up side motors to flip cube
                 self.move_axis('y', 'open')
 
