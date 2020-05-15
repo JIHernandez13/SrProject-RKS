@@ -58,14 +58,14 @@ class motor:
     """ NEMA17 motor object to describe setup and functions """
     # static class vars
     directions = {'cw': 1, 'ccw': 0}
-    step_delay = .001  # delay between steps
     steps_per_revolution = 200  # degrees per step 1.8 deg
 
     # default constructor
-    def __init__(self, step_pin=40, dir_pin=5):
+    def __init__(self, step_pin=40, dir_pin=5, step_delay=0.001):
         self.step_pin = step_pin
         self.dir_pin = dir_pin
         self.position_degrees = 0  # degrees
+        self.step_delay = step_delay  # delay between steps
         GPIO.setup(self.step_pin, GPIO.OUT)
         GPIO.setup(self.dir_pin, GPIO.OUT)
 
@@ -99,9 +99,8 @@ class motor:
 
 
 class rks(motor):
-    """ Rubik's cube solver object
-    Local vars: 6 motor objects
-     """
+    """ Rubik's cube solver object"""
+    # generic color ranges
     colors = {'white': (255, 255, 255),  # FFFFFF
               'red': (255, 0, 0),  # FF0000
               'blue': (0, 0, 255),  # 0000FF
@@ -109,6 +108,15 @@ class rks(motor):
               'green': (0, 128, 0),  # 008000
               'yellow': (255, 255, 0)  # FFFF00
               }
+
+    # mapping all similar solutions for readability
+    movements = {"front": ["F", "F'", "F2"],
+                 "back": ["B", "B'", "B2"],
+                 "up": ["U", "U'", "U2"],
+                 "down": ["D", "D'", "D2"],
+                 "left": ["L", "L'", "L2"],
+                 "right": ["R", "R'", "R2"]
+                 }
 
     def __init__(self, **kwargs):
         self.m_front = kwargs['front']
@@ -140,22 +148,105 @@ class rks(motor):
                              "D2": 180}
 
     def rotate_front(self, degrees):
-        pass
+        self.m_front(degrees)
 
     def rotate_right(self, degrees):
-        pass
-
-    def rotate_up(self, degrees):
-        pass
+        self.m_right(degrees)
 
     def rotate_left(self, degrees):
-        pass
+        self.m_left(degrees)
 
     def rotate_back(self, degrees):
-        pass
+        self.m_back(degrees)
+
+    def rotate_up(self, degrees):
+        # open up side motors to flip cube
+        self.move_axis('x', 'open')
+        sleep(0.1)
+
+        # flip cube
+        # Threading first command will pass onto second intruction and
+        # make these 2 lines more or less concurrent
+        jobs = []
+        t1 = threading.Thread(self.m_left.rotate(90))
+        t2 = threading.Thread(self.m_right.rotate(-90))
+        jobs.append(t1)
+        jobs.append(t2)
+
+        # flip cube
+        # start turns concurrently
+        for j in jobs:
+            j.start()
+
+        # make sure tasks finishes
+        for j in jobs:
+            j.join()
+
+        sleep(.5)
+
+        # make the rotation
+        self.m_front.rotate(degrees)
+
+        # put cube back in proper orientation
+        jobs = []
+        t1 = threading.Thread(self.m_left.rotate(-90))
+        t2 = threading.Thread(self.m_right.rotate(90))
+        jobs.append(t1)
+        jobs.append(t2)
+
+        # flip cube
+        # start turns concurrently
+        for j in jobs:
+            j.start()
+
+        # make sure tasks finishes
+        for j in jobs:
+            j.join()
+
+        # close side motors
+        self.move_axis('x', 'close')
 
     def rotate_down(self, degrees):
-        pass
+        # open up side motors to flip cube
+        self.move_axis('y', 'open')
+
+        sleep(0.1)
+
+        jobs = []
+        t1 = threading.Thread(self.m_left.rotate(-90))
+        t2 = threading.Thread(self.m_right.rotate(90))
+        jobs.append(t1)
+        jobs.append(t2)
+
+        # flip cube
+        # start turns concurrently
+        for j in jobs:
+            j.start()
+
+        # make sure tasks finishes
+        for j in jobs:
+            j.join()
+
+        # make the rotation
+        self.m_right.rotate(degrees)
+
+        jobs = []
+        t1 = threading.Thread(self.m_left.rotate(90))
+        t2 = threading.Thread(self.m_right.rotate(-90))
+        jobs.append(t1)
+        jobs.append(t2)
+
+        # flip cube
+        # start turns concurrently
+        for j in jobs:
+            j.start()
+
+        # make sure tasks finishes
+        for j in jobs:
+            j.join()
+
+        # close side motors
+        self.move_axis('y', 'close')
 
     # TODO: create rotations for each item in the list returned from
     # TODO: create solution for up and down row rotations
@@ -163,140 +254,28 @@ class rks(motor):
 
     def RKS_Solve(self, solution):
         """ takes in list of rotations required to solve the cube """
+
         for rotation in solution:
             degrees = RKS_NOTATION[rotation]  # unpack solution
 
-            if rotation is "F":
-                pass
-            elif rotation is "R":
-                pass
-            elif rotation is "U":
-                pass
-            elif rotation is "L":
-                pass
-            elif rotation is "B":
-                pass
-            elif rotation is "D":
-                pass
+            if (rotation in movements["front"]):
+                self.rotate_front(degrees)
 
-            elif rotation is "F'":
-                pass
-            elif rotation is "R'":
-                pass
-            elif rotation is "U'":
-                pass
-            elif rotation is "L'":
-                pass
-            elif rotation is "B'":
-                pass
-            elif rotation is "D'":
-                pass
+            elif (rotation in movements["back"]):
+                self.rotate_front(degrees)
 
-            elif rotation is "F2":
-                pass
-            elif rotation is "R2":
-                pass
-            elif rotation is "U2":
-                pass
-            elif rotation is "L2":
-                pass
-            elif rotation is "B2":
-                pass
-            elif rotation is "D2":
-                pass
+            elif (rotation in movements["up"]):
+                self.rotate_front(degrees)
 
-            if rotation is not "up" or "down":
-                rotation.rotate(degrees)
-            elif rotation is "up":
-                # open up side motors to flip cube
-                self.move_axis('x', 'open')
-                sleep(0.1)
+            elif (rotation in movements["down"]):
+                self.rotate_front(degrees)
 
-                # flip cube
-                # Threading first command will pass onto second intruction and
-                # make these 2 lines more or less concurrent
-                jobs = []
-                t1 = threading.Thread(self.m_left.rotate(90))
-                t2 = threading.Thread(self.m_right.rotate(-90))
-                jobs.append(t1)
-                jobs.append(t2)
+            elif (rotation in movements["left"]):
+                self.rotate_front(degrees)
 
-                # flip cube
-                # start turns concurrently
-                for j in jobs:
-                    j.start()
+            elif (rotation in movements["right"]):
+                self.rotate_front(degrees)
 
-                # make sure tasks finishes
-                for j in jobs:
-                    j.join()
-
-                sleep(.5)
-
-                # make the rotation
-                self.m_front.rotate(degrees)
-
-                # put cube back in proper orientation
-                jobs = []
-                t1 = threading.Thread(self.m_left.rotate(-90))
-                t2 = threading.Thread(self.m_right.rotate(90))
-                jobs.append(t1)
-                jobs.append(t2)
-
-                # flip cube
-                # start turns concurrently
-                for j in jobs:
-                    j.start()
-
-                # make sure tasks finishes
-                for j in jobs:
-                    j.join()
-
-                # close side motors
-                self.move_axis('x', 'close')
-
-            elif rotation is "down":
-                # open up side motors to flip cube
-                self.move_axis('y', 'open')
-
-                sleep(0.1)
-
-                jobs = []
-                t1 = threading.Thread(self.m_left.rotate(-90))
-                t2 = threading.Thread(self.m_right.rotate(90))
-                jobs.append(t1)
-                jobs.append(t2)
-
-                # flip cube
-                # start turns concurrently
-                for j in jobs:
-                    j.start()
-
-                # make sure tasks finishes
-                for j in jobs:
-                    j.join()
-
-                # make the rotation
-                self.m_right.rotate(degrees)
-
-                jobs = []
-                t1 = threading.Thread(self.m_left.rotate(90))
-                t2 = threading.Thread(self.m_right.rotate(-90))
-                jobs.append(t1)
-                jobs.append(t2)
-
-                # flip cube
-                # start turns concurrently
-                for j in jobs:
-                    j.start()
-
-                # make sure tasks finishes
-                for j in jobs:
-                    j.join()
-
-                # close side motors
-                self.move_axis('y', 'close')
-
-    @staticmethod
     def move_axis(self, axis=None, direction=None):
         """ moves axis in or out\n
         @param1: axis to be moved\n
@@ -394,6 +373,7 @@ def main():
               'right': motor(STEP_PINS[3], DIR_PINS[3]),
               'xAxis': motor(STEP_PINS[4], DIR_PINS[4]),
               'yAxis': motor(STEP_PINS[5], DIR_PINS[5])}
+
     d1 = motor(13, 11)
     d2 = motor(19, 15)
     d3 = motor(23, 21)
